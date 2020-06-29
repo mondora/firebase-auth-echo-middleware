@@ -9,6 +9,8 @@
 .DS_Store
 .DS_Store?
 
+cmd
+
 # Test binary, built with `go test -c`
 *.test
 
