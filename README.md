@@ -52,5 +52,6 @@ func main() {
 	apiV1 := router.Group("/api/v1")
 	apiV1.Use(firebaseAuth)
 	apiV1.GET("/test-api", testApiHandler)
+    router.Logger.Fatal(router.Start(":8080"))
 }
 ```
