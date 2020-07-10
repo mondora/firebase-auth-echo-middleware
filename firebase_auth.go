@@ -23,9 +23,13 @@ type (
 		// Skipper defines a function to skip middleware.
 		Skipper middleware.Skipper
 
-		// Context key to store user information from the token into context.
+		// ID key to store user information from the token into context.
+		// Optional. Default value "id-key".
+		ContextIDKey string
+
+		// Context key to store user information from the user into context.
 		// Optional. Default value "user".
-		ContextKey string
+		ContextUserKey string
 
 		// Claims are extendable claims data defining token content.
 		// Optional. Default value gwt.MapClaims
@@ -60,10 +64,11 @@ var (
 	// nolint
 	// DefaultFirebaseAuthConfig is the default auth middleware config.
 	DefaultFirebaseAuthConfig = Config{
-		Skipper:     middleware.DefaultSkipper,
-		ContextKey:  "user",
-		TokenLookup: "header:" + echo.HeaderAuthorization,
-		AuthScheme:  "Bearer",
+		Skipper:        middleware.DefaultSkipper,
+		ContextIDKey:   "id-key",
+		ContextUserKey: "user",
+		TokenLookup:    "header:" + echo.HeaderAuthorization,
+		AuthScheme:     "Bearer",
 	}
 )
 
@@ -84,8 +89,8 @@ func WithConfig(config Config) echo.MiddlewareFunc {
 	if config.Skipper == nil {
 		config.Skipper = DefaultFirebaseAuthConfig.Skipper
 	}
-	if config.ContextKey == "" {
-		config.ContextKey = DefaultFirebaseAuthConfig.ContextKey
+	if config.ContextUserKey == "" {
+		config.ContextUserKey = DefaultFirebaseAuthConfig.ContextUserKey
 	}
 	if config.TokenLookup == "" {
 		config.TokenLookup = DefaultFirebaseAuthConfig.TokenLookup
@@ -131,20 +136,41 @@ func WithConfig(config Config) echo.MiddlewareFunc {
 				return err
 			}
 
+			client.GetUser(context.Background(), auth)
 			tok, err := client.VerifyIDToken(context.Background(), auth)
-			if err == nil {
-				// Store user information from token into context.
-				jsTok, _ := json.Marshal(tok)
-				c.Set(config.ContextKey, string(jsTok))
-				c.Set("auth-provider", "firebase")
-				return next(c)
+			if err != nil {
+				return &echo.HTTPError{
+					Code:     ErrTokenInvalid.Code,
+					Message:  ErrTokenInvalid.Message,
+					Internal: err,
+				}
 			}
-
+			// Store user information from token into context.
+			jsTok, _ := json.Marshal(tok)
+			c.Set(config.ContextIDKey, string(jsTok))
+			c.Set("auth-provider", "firebase")
+			//return next(c)
+			wantUser := c.Request().Header.Get("X-GetUser")
+			if wantUser == "true" {
+				user, err := client.GetUser(context.Background(), tok.UID)
+				if err != nil {
+					return &echo.HTTPError{
+						Code:     ErrTokenInvalid.Code,
+						Message:  ErrTokenInvalid.Message,
+						Internal: err,
+					}
+				}
+				jsUser, _ := json.Marshal(user)
+				c.Set(config.ContextUserKey, string(jsUser))
+			}
+			return next(c)
+			/*
 			return &echo.HTTPError{
 				Code:     ErrTokenInvalid.Code,
 				Message:  ErrTokenInvalid.Message,
 				Internal: err,
 			}
+			 */
 		}
 	}
 }
