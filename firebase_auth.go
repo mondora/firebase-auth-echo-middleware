@@ -31,6 +31,8 @@ type (
 		// Optional. Default value "user".
 		ContextUserKey string
 
+		ContextUserIDKey string
+
 		// Claims are extendable claims data defining token content.
 		// Optional. Default value gwt.MapClaims
 		//Claims gwt.ClaimSet
@@ -64,11 +66,12 @@ var (
 	// nolint
 	// DefaultFirebaseAuthConfig is the default auth middleware config.
 	DefaultFirebaseAuthConfig = Config{
-		Skipper:        middleware.DefaultSkipper,
-		ContextIDKey:   "id-key",
-		ContextUserKey: "user",
-		TokenLookup:    "header:" + echo.HeaderAuthorization,
-		AuthScheme:     "Bearer",
+		Skipper:          middleware.DefaultSkipper,
+		ContextIDKey:     "id-key",
+		ContextUserKey:   "user",
+		ContextUserIDKey: "userID",
+		TokenLookup:      "header:" + echo.HeaderAuthorization,
+		AuthScheme:       "Bearer",
 	}
 )
 
@@ -91,6 +94,9 @@ func WithConfig(config Config) echo.MiddlewareFunc {
 	}
 	if config.ContextIDKey == "" {
 		config.ContextIDKey = DefaultFirebaseAuthConfig.ContextIDKey
+	}
+	if config.ContextUserIDKey == "" {
+		config.ContextUserIDKey = DefaultFirebaseAuthConfig.ContextUserIDKey
 	}
 	if config.ContextUserKey == "" {
 		config.ContextUserKey = DefaultFirebaseAuthConfig.ContextUserKey
@@ -139,7 +145,7 @@ func WithConfig(config Config) echo.MiddlewareFunc {
 				return err
 			}
 
-			client.GetUser(context.Background(), auth)
+			_, _ = client.GetUser(context.Background(), auth)
 			tok, err := client.VerifyIDToken(context.Background(), auth)
 			if err != nil {
 				return &echo.HTTPError{
@@ -150,6 +156,14 @@ func WithConfig(config Config) echo.MiddlewareFunc {
 			}
 			// Store user information from token into context.
 			jsTok, _ := json.Marshal(tok)
+			// Store userID into context.
+			emailInterface := tok.Firebase.Identities["email"].([]interface{})
+			if emailInterface != nil {
+				//emailList := make([]string, len(emailInterface))
+				if len(emailInterface) > 0 {
+					c.Set(config.ContextUserIDKey, emailInterface[0].(string))
+				}
+			}
 			c.Set(config.ContextIDKey, string(jsTok))
 			c.Set("auth-provider", "firebase")
 			//return next(c)
@@ -168,18 +182,21 @@ func WithConfig(config Config) echo.MiddlewareFunc {
 			}
 			return next(c)
 			/*
-			return &echo.HTTPError{
-				Code:     ErrTokenInvalid.Code,
-				Message:  ErrTokenInvalid.Message,
-				Internal: err,
-			}
-			 */
+				return &echo.HTTPError{
+					Code:     ErrTokenInvalid.Code,
+					Message:  ErrTokenInvalid.Message,
+					Internal: err,
+				}
+			*/
 		}
 	}
 }
 
-func GetContextValue(c echo.Context, key string) map[string]interface{} {
+func GetContextValueMap(c echo.Context, key string) map[string]interface{} {
 	val := c.Get(key)
+	if val == nil {
+		return nil
+	}
 	valStr := fmt.Sprintf("%v", val)
 	valJSON := make(map[string]interface{})
 	if val != nil {
@@ -190,6 +207,14 @@ func GetContextValue(c echo.Context, key string) map[string]interface{} {
 		return valJSON
 	}
 	return nil
+}
+
+func GetContextValue(c echo.Context, key string) string {
+	val := c.Get(key)
+	if val == nil {
+		return ""
+	}
+	return fmt.Sprintf("%v", val)
 }
 
 // tokenFromHeader returns a `tokenExtractorFunc` that extracts token from the request header.
