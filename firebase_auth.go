@@ -89,6 +89,9 @@ func WithConfig(config Config) echo.MiddlewareFunc {
 	if config.Skipper == nil {
 		config.Skipper = DefaultFirebaseAuthConfig.Skipper
 	}
+	if config.ContextIDKey == "" {
+		config.ContextIDKey = DefaultFirebaseAuthConfig.ContextIDKey
+	}
 	if config.ContextUserKey == "" {
 		config.ContextUserKey = DefaultFirebaseAuthConfig.ContextUserKey
 	}
@@ -173,6 +176,20 @@ func WithConfig(config Config) echo.MiddlewareFunc {
 			 */
 		}
 	}
+}
+
+func GetContextValue(c echo.Context, key string) map[string]interface{} {
+	val := c.Get(key)
+	valStr := fmt.Sprintf("%v", val)
+	valJSON := make(map[string]interface{})
+	if val != nil {
+		err := json.Unmarshal([]byte(valStr), &valJSON)
+		if err != nil {
+			return nil
+		}
+		return valJSON
+	}
+	return nil
 }
 
 // tokenFromHeader returns a `tokenExtractorFunc` that extracts token from the request header.
