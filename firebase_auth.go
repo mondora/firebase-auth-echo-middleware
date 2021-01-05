@@ -199,14 +199,11 @@ func GetContextValueMap(c echo.Context, key string) map[string]interface{} {
 	}
 	valStr := fmt.Sprintf("%v", val)
 	valJSON := make(map[string]interface{})
-	if val != nil {
-		err := json.Unmarshal([]byte(valStr), &valJSON)
-		if err != nil {
-			return nil
-		}
-		return valJSON
+	err := json.Unmarshal([]byte(valStr), &valJSON)
+	if err != nil {
+		return nil
 	}
-	return nil
+	return valJSON
 }
 
 func GetContextValue(c echo.Context, key string) string {
