@@ -158,14 +158,6 @@ func WithConfig(config Config) echo.MiddlewareFunc {
 			if err != nil {
 				return unauthorized(err)
 			}
-			if config.GetRoles != nil {
-				roles := config.GetRoles(auth)
-				if len(roles) == 0 {
-					return unauthorized(errors.New("no roles found"))
-				}
-				// export roles into context
-				c.Set(ContextKeyRoles, roles)
-			}
 			// Store user information from token into context.
 			jsTok, _ := json.Marshal(tok)
 			// Store userID into context.
@@ -178,6 +170,14 @@ func WithConfig(config Config) echo.MiddlewareFunc {
 			}
 			c.Set(config.ContextIDKey, string(jsTok))
 			c.Set("auth-provider", "firebase")
+			if config.GetRoles != nil {
+				roles := config.GetRoles(config.ContextUserIDKey)
+				if len(roles) == 0 {
+					return unauthorized(errors.New("no roles found"))
+				}
+				// export roles into context
+				c.Set(ContextKeyRoles, roles)
+			}
 			// return next(c)
 			wantUser := c.Request().Header.Get("X-GetUser")
 			if wantUser == "true" {
