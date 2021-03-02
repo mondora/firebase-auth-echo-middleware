@@ -162,16 +162,18 @@ func WithConfig(config Config) echo.MiddlewareFunc {
 			jsTok, _ := json.Marshal(tok)
 			// Store userID into context.
 			emailInterface := tok.Firebase.Identities["email"].([]interface{})
+			var email string
 			if emailInterface != nil {
 				// emailList := make([]string, len(emailInterface))
 				if len(emailInterface) > 0 {
-					c.Set(config.ContextUserIDKey, emailInterface[0].(string))
+					email = emailInterface[0].(string)
+					c.Set(config.ContextUserIDKey, email)
 				}
 			}
 			c.Set(config.ContextIDKey, string(jsTok))
 			c.Set("auth-provider", "firebase")
 			if config.GetRoles != nil {
-				roles := config.GetRoles(config.ContextUserIDKey)
+				roles := config.GetRoles(email)
 				if len(roles) == 0 {
 					return unauthorized(errors.New("no roles found"))
 				}
