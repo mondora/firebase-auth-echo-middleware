@@ -3,6 +3,7 @@ package firebaseauth
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	firebase "firebase.google.com/go/v4"
 	"fmt"
 	"google.golang.org/api/option"
@@ -16,6 +17,10 @@ import (
 /**
 Google Firebase AUTH - echo middleware definition
 */
+
+const (
+	ContextKeyRoles = "roles"
+)
 
 type (
 	// Config defines the config for Firebase Auth JWT middleware.
@@ -33,9 +38,11 @@ type (
 
 		ContextUserIDKey string
 
+		GetRoles GetRolesFunc
+
 		// Claims are extendable claims data defining token content.
 		// Optional. Default value gwt.MapClaims
-		//Claims gwt.ClaimSet
+		// Claims gwt.ClaimSet
 
 		// TokenLookup is a string in the form of "<source>:<name>" that is used
 		// to extract token from the request.
@@ -56,14 +63,12 @@ type (
 	tokenExtractorFunc func(echo.Context) (string, error)
 )
 
-// Errors
+//nolint
 var (
+	// Errors
 	ErrTokenMissing = echo.NewHTTPError(http.StatusBadRequest, "Missing or malformed Firebase AuthID TOKEN")
 	ErrTokenInvalid = echo.NewHTTPError(http.StatusUnauthorized, "Invalid or expired Firebase AuthID TOKEN")
-)
 
-var (
-	// nolint
 	// DefaultFirebaseAuthConfig is the default auth middleware config.
 	DefaultFirebaseAuthConfig = Config{
 		Skipper:          middleware.DefaultSkipper,
@@ -74,6 +79,9 @@ var (
 		AuthScheme:       "Bearer",
 	}
 )
+
+// GetRolesFunc is an external closure function that can retrieve roles by email.
+type GetRolesFunc func(email string) []string
 
 // FirebaseAuth returns a JSON Web Token (JWT) auth middleware.
 //
@@ -148,47 +156,48 @@ func WithConfig(config Config) echo.MiddlewareFunc {
 			_, _ = client.GetUser(context.Background(), auth)
 			tok, err := client.VerifyIDToken(context.Background(), auth)
 			if err != nil {
-				return &echo.HTTPError{
-					Code:     ErrTokenInvalid.Code,
-					Message:  ErrTokenInvalid.Message,
-					Internal: err,
+				return unauthorized(err)
+			}
+			if config.GetRoles != nil {
+				roles := config.GetRoles(auth)
+				if len(roles) == 0 {
+					return unauthorized(errors.New("no roles found"))
 				}
+				// export roles into context
+				c.Set(ContextKeyRoles, roles)
 			}
 			// Store user information from token into context.
 			jsTok, _ := json.Marshal(tok)
 			// Store userID into context.
 			emailInterface := tok.Firebase.Identities["email"].([]interface{})
 			if emailInterface != nil {
-				//emailList := make([]string, len(emailInterface))
+				// emailList := make([]string, len(emailInterface))
 				if len(emailInterface) > 0 {
 					c.Set(config.ContextUserIDKey, emailInterface[0].(string))
 				}
 			}
 			c.Set(config.ContextIDKey, string(jsTok))
 			c.Set("auth-provider", "firebase")
-			//return next(c)
+			// return next(c)
 			wantUser := c.Request().Header.Get("X-GetUser")
 			if wantUser == "true" {
 				user, err := client.GetUser(context.Background(), tok.UID)
 				if err != nil {
-					return &echo.HTTPError{
-						Code:     ErrTokenInvalid.Code,
-						Message:  ErrTokenInvalid.Message,
-						Internal: err,
-					}
+					return unauthorized(err)
 				}
 				jsUser, _ := json.Marshal(user)
 				c.Set(config.ContextUserKey, string(jsUser))
 			}
 			return next(c)
-			/*
-				return &echo.HTTPError{
-					Code:     ErrTokenInvalid.Code,
-					Message:  ErrTokenInvalid.Message,
-					Internal: err,
-				}
-			*/
 		}
+	}
+}
+
+func unauthorized(err error) *echo.HTTPError {
+	return &echo.HTTPError{
+		Code:     ErrTokenInvalid.Code,
+		Message:  ErrTokenInvalid.Message,
+		Internal: err,
 	}
 }
 
