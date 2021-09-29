@@ -90,6 +90,7 @@ type GetRolesFunc func(email string) []string
 // For missing token, it returns "400 - Bad Request" error.
 func FirebaseAuth() echo.MiddlewareFunc {
 	c := DefaultFirebaseAuthConfig
+
 	return WithConfig(c)
 }
 
@@ -134,12 +135,12 @@ func WithConfig(config Config) echo.MiddlewareFunc {
 		nil,
 		option.WithCredentialsJSON(config.CredentialJSON))
 	if err != nil {
-		panic(fmt.Errorf("error initializing app: %v", err))
+		panic(fmt.Errorf("error initializing app: %w", err))
 	}
 	// Access auth service from the default app
 	client, err := authApp.Auth(context.Background())
 	if err != nil {
-		panic(fmt.Errorf("error getting Auth client: %v", err))
+		panic(fmt.Errorf("error getting Auth client: %w", err))
 	}
 
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
@@ -161,12 +162,12 @@ func WithConfig(config Config) echo.MiddlewareFunc {
 			// Store user information from token into context.
 			jsTok, _ := json.Marshal(tok)
 			// Store userID into context.
-			emailInterface := tok.Firebase.Identities["email"].([]interface{})
+			emailInterface := tok.Firebase.Identities["email"].([]interface{}) //nolint:forcetypeassert
 			var email string
 			if emailInterface != nil {
 				// emailList := make([]string, len(emailInterface))
 				if len(emailInterface) > 0 {
-					email = emailInterface[0].(string)
+					email = emailInterface[0].(string) //nolint:forcetypeassert
 					c.Set(config.ContextUserIDKey, email)
 				}
 			}
@@ -190,6 +191,7 @@ func WithConfig(config Config) echo.MiddlewareFunc {
 				jsUser, _ := json.Marshal(user)
 				c.Set(config.ContextUserKey, string(jsUser))
 			}
+
 			return next(c)
 		}
 	}
@@ -214,6 +216,7 @@ func GetContextValueMap(c echo.Context, key string) map[string]interface{} {
 	if err != nil {
 		return nil
 	}
+
 	return valJSON
 }
 
@@ -222,6 +225,7 @@ func GetContextValue(c echo.Context, key string) string {
 	if val == nil {
 		return ""
 	}
+
 	return fmt.Sprintf("%v", val)
 }
 
@@ -233,6 +237,7 @@ func tokenFromHeader(header string, authScheme string) tokenExtractorFunc {
 		if len(auth) > l+1 && auth[:l] == authScheme {
 			return auth[l+1:], nil
 		}
+
 		return "", ErrTokenMissing
 	}
 }
@@ -244,6 +249,7 @@ func tokenFromQuery(param string) tokenExtractorFunc {
 		if token == "" {
 			return "", ErrTokenMissing
 		}
+
 		return token, nil
 	}
 }
@@ -255,6 +261,7 @@ func tokenFromCookie(name string) tokenExtractorFunc {
 		if err != nil {
 			return "", ErrTokenMissing
 		}
+
 		return cookie.Value, nil
 	}
 }
