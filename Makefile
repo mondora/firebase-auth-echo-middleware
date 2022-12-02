@@ -7,4 +7,4 @@ test:
 	go test -race $(shell go list ./... | grep -v /vendor/)
 
 tidy:
-	go mod tidy -compat=1.17
+	go mod tidy -compat=1.19

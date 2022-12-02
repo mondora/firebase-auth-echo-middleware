@@ -4,38 +4,29 @@ run:
 linters:
   disable-all: true
   enable:
-    - deadcode # Finds unused code
-    #- golint # Golint differs from gofmt. Gofmt reformats Go source code, whereas golint prints out style mistakes
     - revive
     - gofmt # Gofmt checks whether code was gofmt-ed. By default this tool runs with -s option to check for code simplification
     - gosimple # Linter for Go source code that specializes in simplifying a code
     - govet # Vet examines Go source code and reports suspicious constructs, such as Printf calls whose arguments do not align with the format string
     - errcheck # Errcheck is a program for checking for unchecked errors in go programs. These unchecked errors can be critical bugs in some cases
     - ineffassign # Detects when assignments to existing variables are not used
-    #- lll # Reports long lines
     - staticcheck # Staticcheck is a go vet on steroids, applying a ton of static analysis checks
-    - structcheck # Finds an unused struct fields
     - typecheck # Like the front-end of a Go compiler, parses and type-checks Go code
     - unconvert # Remove unnecessary type conversions
     - unparam # Reports unused function parameters
     - unused # Checks Go code for unused constants, variables, functions and types
-    - varcheck # Finds unused global variables and constants
-    #- interfacer # Linter that suggests narrower interface types
     - dupl # Tool for code clone detection
     - goconst # Finds repeated strings that could be replaced by a constant
     - gocyclo # Computes and checks the cyclomatic complexity of functions
-    #- maligned # Tool to detect Go structs that would take less memory if their fields were sorted
     - depguard # Go linter that checks if package imports are in a list of acceptable packages
     - misspell # Finds commonly misspelled English words in comments
     - nakedret # Finds naked returns in functions greater than a specified function length
     - prealloc # Finds slice declarations that could potentially be preallocated
-    #- scopelint # Scopelint checks for unpinned variables in go programs
     - exportloopref
     - gocritic # The most opinionated Go source code linter
     - gochecknoinits # Checks that no init functions are present in Go code
     - gochecknoglobals # Checks that no globals are present in Go code
     - gosec # Inspects source code for security problems
-    - ifshort
     - makezero
     - nilerr
     - nlreturn

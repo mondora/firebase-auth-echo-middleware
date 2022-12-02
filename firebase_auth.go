@@ -63,7 +63,7 @@ type (
 	tokenExtractorFunc func(echo.Context) (string, error)
 )
 
-//nolint
+//nolint:gochecknoglobals
 var (
 	// Errors
 	ErrTokenMissing = echo.NewHTTPError(http.StatusBadRequest, "Missing or malformed Firebase AuthID TOKEN")
