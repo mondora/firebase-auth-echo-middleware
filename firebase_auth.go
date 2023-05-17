@@ -4,11 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	firebase "firebase.google.com/go/v4"
 	"fmt"
-	"google.golang.org/api/option"
 	"net/http"
 	"strings"
+
+	firebase "firebase.google.com/go/v4"
+
+	"google.golang.org/api/option"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -230,7 +232,7 @@ func GetContextValue(c echo.Context, key string) string {
 }
 
 // tokenFromHeader returns a `tokenExtractorFunc` that extracts token from the request header.
-func tokenFromHeader(header string, authScheme string) tokenExtractorFunc {
+func tokenFromHeader(header, authScheme string) tokenExtractorFunc {
 	return func(c echo.Context) (string, error) {
 		auth := c.Request().Header.Get(header)
 		l := len(authScheme)

@@ -6,5 +6,11 @@ format:
 test:
 	go test -race $(shell go list ./... | grep -v /vendor/)
 
+gofumpt:
+	gofumpt -w -extra -lang 1.20 .
+
 tidy:
-	go mod tidy -compat=1.19
+	go mod tidy -compat=1.20
+
+vuln:
+	govulncheck -v ./...
